@@ -53,7 +53,9 @@ The AWS Lambda function (lambda_function.py) is triggered to execute the ETL pro
 
 Docker is used to containerize the Lambda function. The Dockerfile is provided to build the container image, which is then pushed to AWS ECR.
 
-### AWS Services Used
+---
+
+## AWS Services Used
 
 * AWS Lambda: Runs the ETL script
 * Amazon S3: Stores the transformed data
