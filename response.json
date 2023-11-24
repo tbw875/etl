@@ -1,1 +1,1 @@
-{"errorMessage": "name 'bucket' is not defined", "errorType": "NameError", "requestId": "f33e72bc-ca10-4530-a37a-5a1d3a03bdb9", "stackTrace": ["  File \"/var/task/lambda_function.py\", line 42, in handler\n    f\"Parking data for {date.today().isoformat()} successfully uploaded to {bucket}!\"\n"]}
+{"statusCode": 200, "body": "\"Parking data for 2023-11-24 successfully uploaded to seattle-parking-data!\""}
