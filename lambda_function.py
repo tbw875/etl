@@ -30,15 +30,15 @@ def handler(event, context):
     s3 = boto3.resource("s3")
 
     # Define bucket name and file name
-    bucket = "seattle-parking-data"
+    bucket_name = "seattle-parking-data"
     file_name = f"parking_data_{date.today().isoformat()}.json"
 
     # Upload to S3
-    s3.put_object(Body=data_json, Bucket=bucket, Key=file_name)
+    s3.Object(bucket_name, file_name).put(Body=data_json)
 
     return {
         "statusCode": 200,
         "body": json.dumps(
-            f"Parking data for {date.today().isoformat()} successfully uploaded to {bucket}!"
+            f"Parking data for {date.today().isoformat()} successfully uploaded to {bucket_name}!"
         ),
     }
