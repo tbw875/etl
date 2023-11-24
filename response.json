@@ -1,1 +1,1 @@
-{"errorMessage":"2023-11-24T19:10:09.785Z a7cf01c3-cd98-452d-aedc-fd93ad2a3836 Task timed out after 3.01 seconds"}
+{"errorMessage": "name 'datetime' is not defined", "errorType": "NameError", "requestId": "878acc01-495a-4c44-8ffb-37aa6dba5396", "stackTrace": ["  File \"/var/task/lambda_function.py\", line 24, in handler\n    data = transform_data(data)\n", "  File \"/var/task/lambda_function.py\", line 11, in transform_data\n    record[\"transactiondatetime\"] = datetime.strptime(\n"]}

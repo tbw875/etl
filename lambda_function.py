@@ -1,7 +1,7 @@
 import requests
 import json
 import boto3
-from datetime import date
+from datetime import date, datetime
 
 
 def transform_data(data):
