@@ -28,9 +28,9 @@ To run the ETL pipeline:
 
 1. Navigate to the project directory.
 2. Build the Docker image:
-   ```bash
-   docker build -t seattle-parking-etl:latest .
-   ```
+```bash
+docker build -t seattle-parking-etl:latest .
+```
 3. Run the AWS commands to push the image to ECR and update the Lambda function (refer to the automated script section).
 
 ### Automated Script
