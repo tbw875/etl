@@ -5,7 +5,7 @@ from datetime import date, datetime
 import pymysql
 import os
 
-user = os.environ["RDS_USER"]
+user = os.environ["RDS_USERNAME"]
 password = os.environ["RDS_PASSWORD"]
 
 
@@ -13,7 +13,7 @@ password = os.environ["RDS_PASSWORD"]
 def load_data_into_rds(file_name, bucket_name):
     # Database connection parameters
     rds_host = "seattle-paid-parking.ckhfrrg1sdtj.us-west-2.rds.amazonaws.com"
-    user = "RDS_USER"
+    user = "RDS_USERNAME"
     password = "RDS_PASSWORD"
     db_name = "seattle-paid-parking"
 
