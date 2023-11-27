@@ -5,16 +5,13 @@ from datetime import date, datetime
 import pymysql
 import os
 
-user = os.environ["RDS_USERNAME"]
-password = os.environ["RDS_PASSWORD"]
-
 
 # New: Function to load data from S3 into RDS
 def load_data_into_rds(file_name, bucket_name):
     # Database connection parameters
     rds_host = "seattle-paid-parking.ckhfrrg1sdtj.us-west-2.rds.amazonaws.com"
-    user = "RDS_USERNAME"
-    password = "RDS_PASSWORD"
+    user = os.environ["RDS_USERNAME"]
+    password = os.environ["RDS_PASSWORD"]
     db_name = "seattle-paid-parking"
 
     # Connect to the database
