@@ -2,6 +2,38 @@ import requests
 import json
 import boto3
 from datetime import date, datetime
+import pymysql
+import os
+
+user = os.environ["RDS_USER"]
+password = os.environ["RDS_PASSWORD"]
+
+
+# New: Function to load data from S3 into RDS
+def load_data_into_rds(file_name, bucket_name):
+    # Database connection parameters
+    rds_host = "seattle-paid-parking.ckhfrrg1sdtj.us-west-2.rds.amazonaws.com"
+    user = "RDS_USER"
+    password = "RDS_PASSWORD"
+    db_name = "seattle-paid-parking"
+
+    # Connect to the database
+    conn = pymysql.connect(
+        rds_host, user=user, passwd=password, db=db_name, connect_timeout=5
+    )
+
+    with conn.cursor() as cur:
+        load_query = f"""
+        LOAD DATA FROM S3 's3://{bucket_name}/{file_name}'
+        INTO TABLE paid_parking
+        FIELDS TERMINATED BY ','
+        LINES TERMINATED BY '\\n'
+        (transaction_id, meter_code, transactiondatetime, payment_mean, amount_paid, durationinminutes, blockface_name, sideofstreet, elementkey, parkingspacenumber, latitude, longitude);
+        """
+        cur.execute(load_query)
+        conn.commit()
+
+    conn.close()
 
 
 def transform_data(data):
@@ -36,9 +68,11 @@ def handler(event, context):
     # Upload to S3
     s3.Object(bucket_name, file_name).put(Body=data_json)
 
+    load_data_into_rds(file_name, bucket_name)
+
     return {
         "statusCode": 200,
         "body": json.dumps(
-            f"Parking data for {date.today().isoformat()} successfully uploaded to {bucket_name}!"
+            f"Parking data for {date.today().isoformat()} successfully uploaded to {bucket_name} and loaded into RDS!"
         ),
     }
