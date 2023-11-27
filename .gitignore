@@ -1,0 +1,4 @@
+.env
+response.json
+.ipynb_checkpoints
+*.ipynb
