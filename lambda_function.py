@@ -16,7 +16,7 @@ def load_data_into_rds(file_name, bucket_name):
 
     # Connect to the database
     conn = pymysql.connect(
-        rds_host, user=user, passwd=password, db=db_name, connect_timeout=5
+        host=rds_host, user=user, passwd=password, db=db_name, connect_timeout=5
     )
 
     with conn.cursor() as cur:
