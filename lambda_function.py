@@ -6,7 +6,6 @@ import pymysql
 import os
 
 
-# New: Function to load data from S3 into RDS
 def load_data_into_rds(file_name, bucket_name):
     # Database connection parameters
     rds_host = "seattle-paid-parking.ckhfrrg1sdtj.us-west-2.rds.amazonaws.com"
@@ -16,18 +15,40 @@ def load_data_into_rds(file_name, bucket_name):
 
     # Connect to the database
     conn = pymysql.connect(
-        host=rds_host, user=user, passwd=password, db=db_name, connect_timeout=5
+        host=rds_host, user=user, passwd=password, db=db_name, connect_timeout=120
     )
 
+    # Read JSON data from S3
+    s3 = boto3.client("s3")
+    obj = s3.get_object(Bucket=bucket_name, Key=file_name)
+    json_data = json.loads(obj["Body"].read().decode("utf-8"))
+
+    # SQL Insert Statement
+    insert_stmt = """
+    INSERT INTO paid_parking
+    (transaction_id, meter_code, transactiondatetime, payment_mean, amount_paid, durationinminutes, blockface_name, sideofstreet, elementkey, latitude, longitude)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """
+
+    # Insert data into the database
     with conn.cursor() as cur:
-        load_query = f"""
-        LOAD DATA FROM S3 's3://{bucket_name}/{file_name}'
-        INTO TABLE paid_parking
-        FIELDS TERMINATED BY ','
-        LINES TERMINATED BY '\\n'
-        (transaction_id, meter_code, transactiondatetime, payment_mean, amount_paid, durationinminutes, blockface_name, sideofstreet, elementkey, parkingspacenumber, latitude, longitude);
-        """
-        cur.execute(load_query)
+        for record in json_data:
+            cur.execute(
+                insert_stmt,
+                (
+                    record["transaction_id"],
+                    record["meter_code"],
+                    record["transactiondatetime"],
+                    record["payment_mean"],
+                    record["amount_paid"],
+                    record["durationinminutes"],
+                    record["blockface_name"],
+                    record["sideofstreet"],
+                    record["elementkey"],
+                    record["latitude"],
+                    record["longitude"],
+                ),
+            )
         conn.commit()
 
     conn.close()

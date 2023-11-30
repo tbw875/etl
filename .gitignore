@@ -2,3 +2,5 @@
 response.json
 .ipynb_checkpoints
 *.ipynb
+data/
+
