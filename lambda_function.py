@@ -66,7 +66,7 @@ def transform_data(data):
 
 def handler(event, context):
     # Fetch the data from the Seattle Open Data Portal
-    PARKING_ENDPOINT = "https://data.seattle.gov/resource/gg89-k5p6.json?$query=SELECT%20transaction_id%2C%20meter_code%2C%20transactiondatetime%2C%20payment_mean%2C%20amount_paid%2C%20durationinminutes%2C%20blockface_name%2C%20sideofstreet%2C%20elementkey%2C%20parkingspacenumber%2C%20latitude%2C%20longitude%20ORDER%20BY%20%3Aid%20ASC%20LIMIT%201000000"
+    PARKING_ENDPOINT = f"https://data.seattle.gov/resource/gg89-k5p6.json?$$app_token={os.environ['APP_TOKEN']}"
     response = requests.get(PARKING_ENDPOINT)
     data = response.json()
 
