@@ -4,6 +4,7 @@ import boto3
 from datetime import date, datetime
 import pymysql
 import os
+from datetime import datetime, timedelta
 
 
 def load_data_into_rds(file_name, bucket_name):
@@ -65,8 +66,12 @@ def transform_data(data):
 
 
 def handler(event, context):
+    # Calculate yesterday's date
+    yesterday = datetime.now() - timedelta(days=1)
+    formatted_yesterday = yesterday.strftime("%Y-%m-%d")
+
     # Fetch the data from the Seattle Open Data Portal
-    PARKING_ENDPOINT = f"https://data.seattle.gov/resource/gg89-k5p6.json?$$app_token={os.environ['APP_TOKEN']}"
+    PARKING_ENDPOINT = f"https://data.seattle.gov/resource/gg89-k5p6.json?$where=transactiondatetime>={formatted_yesterday}&$$app_token={os.environ['APP_TOKEN']}"
     response = requests.get(PARKING_ENDPOINT)
     data = response.json()
 
