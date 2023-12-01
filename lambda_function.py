@@ -71,7 +71,7 @@ def handler(event, context):
     formatted_yesterday = yesterday.strftime("%Y-%m-%d")
 
     # Fetch the data from the Seattle Open Data Portal
-    PARKING_ENDPOINT = f"https://data.seattle.gov/resource/gg89-k5p6.json?$where=transactiondatetime>={formatted_yesterday}&$$app_token={os.environ['APP_TOKEN']}"
+    PARKING_ENDPOINT = f"https://data.seattle.gov/resource/gg89-k5p6.json?$where=transactiondatetime>='{formatted_yesterday}'&$$app_token={os.environ['APP_TOKEN']}"
     response = requests.get(PARKING_ENDPOINT)
     data = response.json()
 
