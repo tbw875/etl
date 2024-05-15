@@ -1,95 +1,137 @@
 import requests
 import json
 import boto3
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import pymysql
 import os
-from datetime import datetime, timedelta
+import logging
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 
 def load_data_into_rds(file_name, bucket_name):
-    # Database connection parameters
     rds_host = "seattle-paid-parking.ckhfrrg1sdtj.us-west-2.rds.amazonaws.com"
     user = os.environ["RDS_USERNAME"]
     password = os.environ["RDS_PASSWORD"]
     db_name = "seattle-paid-parking"
 
-    # Connect to the database
-    conn = pymysql.connect(
-        host=rds_host, user=user, passwd=password, db=db_name, connect_timeout=120
-    )
+    logging.info("Connecting to RDS")
+    try:
+        conn = pymysql.connect(
+            host=rds_host, user=user, passwd=password, db=db_name, connect_timeout=120
+        )
+        logging.info("Connected to RDS")
+    except pymysql.MySQLError as e:
+        logging.error(
+            f"ERROR: Unexpected error: Could not connect to MySQL instance. {e}"
+        )
+        return
 
-    # Read JSON data from S3
+    logging.info("Reading JSON data from S3")
     s3 = boto3.client("s3")
-    obj = s3.get_object(Bucket=bucket_name, Key=file_name)
-    json_data = json.loads(obj["Body"].read().decode("utf-8"))
+    try:
+        obj = s3.get_object(Bucket=bucket_name, Key=file_name)
+        json_data = json.loads(obj["Body"].read().decode("utf-8"))
+    except Exception as e:
+        logging.error(f"ERROR: Could not read JSON data from S3. {e}")
+        return
 
-    # SQL Insert Statement
     insert_stmt = """
     INSERT INTO paid_parking
     (transaction_id, meter_code, transactiondatetime, payment_mean, amount_paid, durationinminutes, blockface_name, sideofstreet, elementkey, latitude, longitude)
     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
 
-    # Insert data into the database
-    with conn.cursor() as cur:
-        for record in json_data:
-            cur.execute(
-                insert_stmt,
-                (
-                    record["transaction_id"],
-                    record["meter_code"],
-                    record["transactiondatetime"],
-                    record["payment_mean"],
-                    record["amount_paid"],
-                    record["durationinminutes"],
-                    record["blockface_name"],
-                    record["sideofstreet"],
-                    record["elementkey"],
-                    record["latitude"],
-                    record["longitude"],
-                ),
-            )
-        conn.commit()
-
-    conn.close()
-
-
-def transform_data(data):
-    # Transformation of datetime format during extraction
-    for record in data:
-        if "transactiondatetime" in record:
-            record["transactiondatetime"] = datetime.strptime(
-                record["transactiondatetime"], "%Y-%m-%dT%H:%M:%S.%f"
-            ).strftime("%Y-%m-%d %H:%M:%S")
-    return data
+    try:
+        with conn.cursor() as cur:
+            for record in json_data:
+                cur.execute(
+                    insert_stmt,
+                    (
+                        record.get("transaction_id"),
+                        record.get("meter_code"),
+                        record.get("transactiondatetime"),
+                        record.get("payment_mean"),
+                        record.get("amount_paid"),
+                        record.get("durationinminutes"),
+                        record.get("blockface_name"),
+                        record.get("sideofstreet"),
+                        record.get("elementkey"),
+                        record.get("latitude"),
+                        record.get("longitude"),
+                    ),
+                )
+            conn.commit()
+            logging.info("Data successfully inserted into RDS")
+    except pymysql.MySQLError as e:
+        logging.error(f"ERROR: Failed to insert data into MySQL table. {e}")
+    finally:
+        conn.close()
+        logging.info("Connection to RDS closed")
 
 
 def handler(event, context):
-    # Calculate yesterday's date
+    logger.info("Starting Handler")
+
     yesterday = datetime.now() - timedelta(days=1)
     formatted_yesterday = yesterday.strftime("%Y-%m-%d")
 
-    # Fetch the data from the Seattle Open Data Portal
+    logger.info("Fetching data from Seattle Open Data Portal API")
     PARKING_ENDPOINT = f"https://data.seattle.gov/resource/gg89-k5p6.json?$where=transactiondatetime>='{formatted_yesterday}'&$$app_token={os.environ['APP_TOKEN']}"
-    response = requests.get(PARKING_ENDPOINT)
-    data = response.json()
+    try:
+        response = requests.get(PARKING_ENDPOINT, timeout=120)
+        response.raise_for_status()
+        data = response.json()
+    except requests.RequestException as e:
+        logger.error(f"ERROR: Failed to fetch data from API. {e}")
+        return {
+            "statusCode": 500,
+            "body": json.dumps(f"Failed to fetch data from API. {e}"),
+        }
 
-    # Transform the data
-    data = transform_data(data)
+    logger.info("Test endpoint")
+    TEST_ENDPOINT = "https://httpbin.org/get"
+    try:
+        response = requests.get(TEST_ENDPOINT, timeout=120)
+        if response.status_code == 200:
+            logger.info("Test endpoint returned status: 200")
+            return {
+                "statusCode": 200,
+                "body": json.dumps("Test endpoint returned status: 200"),
+            }
+        else:
+            logger.error(f"Test endpoint returned status: {response.status_code}")
+            return {
+                "statusCode": response.status_code,
+                "body": json.dumps(
+                    f"Test endpoint returned status: {response.status_code}"
+                ),
+            }
+    except requests.RequestException as e:
+        logger.error(f"ERROR: Failed to reach test endpoint. {e}")
+        return {
+            "statusCode": 500,
+            "body": json.dumps(f"Failed to reach test endpoint. {e}"),
+        }
 
-    # Convert to JSON
     data_json = json.dumps(data)
 
-    # Set up s3 controller
     s3 = boto3.resource("s3")
+    logging.info("Connected to S3")
 
-    # Define bucket name and file name
     bucket_name = "seattle-parking-data"
     file_name = f"parking_data_{date.today().isoformat()}.json"
 
-    # Upload to S3
-    s3.Object(bucket_name, file_name).put(Body=data_json)
+    try:
+        s3.Object(bucket_name, file_name).put(Body=data_json)
+        logging.info(f"Uploaded {file_name} to {bucket_name}")
+    except Exception as e:
+        logging.error(f"ERROR: Failed to upload data to S3. {e}")
+        return {
+            "statusCode": 500,
+            "body": json.dumps(f"Failed to upload data to S3. {e}"),
+        }
 
     load_data_into_rds(file_name, bucket_name)
 
